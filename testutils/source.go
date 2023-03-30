@@ -1168,7 +1168,190 @@ import (
 
 func main(){
 	fmt.Sprintln()
-}`}, 0, gosec.NewConfig()},
+}`}, 0, gosec.NewConfig()}, {[]string{`
+// Format string with \n\r
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+)
+
+func main(){
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	q := fmt.Sprintf("SELECT * FROM foo where\n name = '%s'", os.Args[1])
+	rows, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+}`}, 1, gosec.NewConfig()}, {[]string{`
+// Format string with \n\r
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+)
+
+func main(){
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	q := fmt.Sprintf("SELECT * FROM foo where\nname = '%s'", os.Args[1])
+	rows, err := db.Query(q)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+}`}, 1, gosec.NewConfig()}, {[]string{`
+// SQLI by db.Query(some).Scan(&other)
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+)
+
+func main() {
+	var name string
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	q := fmt.Sprintf("SELECT name FROM users where id = '%s'", os.Args[1])
+	row := db.QueryRow(q)
+	err = row.Scan(&name)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+}`}, 1, gosec.NewConfig()}, {[]string{`
+// SQLI by db.Query(some).Scan(&other)
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+)
+
+func main() {
+	var name string
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	q := fmt.Sprintf("SELECT name FROM users where id = '%s'", os.Args[1])
+	err = db.QueryRow(q).Scan(&name)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+}`}, 1, gosec.NewConfig()}, {[]string{`
+// SQLI by db.Prepare(some)
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"os"
+)
+
+const Table = "foo"
+
+func main() {
+	var album string
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	q := fmt.Sprintf("SELECT name FROM users where '%s' = ?", os.Args[1])
+	stmt, err := db.Prepare(q)
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt.QueryRow(fmt.Sprintf("%s", os.Args[2])).Scan(&album)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Fatal(err)
+		}
+	}
+	defer stmt.Close()
+}
+`}, 1, gosec.NewConfig()}, {[]string{`
+// SQLI by db.PrepareContext(some)
+package main
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"log"
+	"os"
+)
+
+const Table = "foo"
+
+func main() {
+	var album string
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	q := fmt.Sprintf("SELECT name FROM users where '%s' = ?", os.Args[1])
+	stmt, err := db.PrepareContext(context.Background(), q)
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt.QueryRow(fmt.Sprintf("%s", os.Args[2])).Scan(&album)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Fatal(err)
+		}
+	}
+	defer stmt.Close()
+}
+`}, 1, gosec.NewConfig()}, {[]string{`
+// false positive
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"os"
+)
+
+const Table = "foo"
+
+func main() {
+	var album string
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	stmt, err := db.Prepare("SELECT * FROM album WHERE id = ?")
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt.QueryRow(fmt.Sprintf("%s", os.Args[1])).Scan(&album)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Fatal(err)
+		}
+	}
+	defer stmt.Close()
+}
+`}, 0, gosec.NewConfig()},
 	}
 
 	// SampleCodeG202 - SQL query string building via string concatenation
@@ -1343,6 +1526,70 @@ func main(){
 				panic(err)
 		}
 		defer rows.Close()
+}
+`}, 0, gosec.NewConfig()}, {[]string{`
+// ExecContext match
+package main
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"os"
+)
+
+func main() {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	result, err := db.ExecContext(context.Background(), "select * from foo where name = "+os.Args[1])
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(result)
+}`}, 1, gosec.NewConfig()}, {[]string{`
+// Exec match
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+)
+
+func main() {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	result, err := db.Exec("select * from foo where name = " + os.Args[1])
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(result)
+}`}, 1, gosec.NewConfig()}, {[]string{`
+package main
+
+import (
+	"database/sql"
+	"fmt"
+)
+const gender = "M"
+const age = "32"
+
+var staticQuery = "SELECT * FROM foo WHERE age < "
+
+func main() {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		panic(err)
+	}
+	result, err := db.Exec("SELECT * FROM foo WHERE gender = " + gender)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(result)
 }
 `}, 0, gosec.NewConfig()},
 	}
@@ -1758,6 +2005,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
 )
 
 func main() {
@@ -1775,10 +2024,35 @@ func main() {
 	if err != nil {
 		fmt.Println("Error while writing!")
 	}
-}`}, 3, gosec.NewConfig()}}
+	err = os.WriteFile("/usr/tmp/demo2", []byte("This is some data"), 0644)
+	if err != nil {
+		fmt.Println("Error while writing!")
+	}
+	err = os.WriteFile("/tmp/" + "demo2", []byte("This is some data"), 0644)
+	if err != nil {
+		fmt.Println("Error while writing!")
+	}
+	err = os.WriteFile(os.TempDir() + "/demo2", []byte("This is some data"), 0644)
+	if err != nil {
+		fmt.Println("Error while writing!")
+	}
+	err = os.WriteFile(path.Join("/var/tmp", "demo2"), []byte("This is some data"), 0644)
+	if err != nil {
+		fmt.Println("Error while writing!")
+	}
+	err = os.WriteFile(path.Join(os.TempDir(), "demo2"), []byte("This is some data"), 0644)
+	if err != nil {
+		fmt.Println("Error while writing!")
+	}
+	err = os.WriteFile(filepath.Join(os.TempDir(), "demo2"), []byte("This is some data"), 0644)
+	if err != nil {
+		fmt.Println("Error while writing!")
+	}
+}`}, 9, gosec.NewConfig()}}
 
 	// SampleCodeG304 - potential file inclusion vulnerability
-	SampleCodeG304 = []CodeSample{{[]string{`
+	SampleCodeG304 = []CodeSample{
+		{[]string{`
 package main
 
 import (
@@ -1973,7 +2247,38 @@ func main() {
     }
 }
 
-`}, 0, gosec.NewConfig()}}
+`}, 0, gosec.NewConfig()}, {[]string{`
+package main
+
+import (
+	"io"
+	"os"
+)
+
+func createFile(file string) *os.File {
+	f, err := os.Create(file)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+func main() {
+	s, err := os.Open("src")
+	if err != nil {
+		panic(err)
+	}
+	defer s.Close()
+
+	d := createFile("dst")
+	defer d.Close()
+
+	_, err = io.Copy(d, s)
+	if  err != nil {
+		panic(err)
+	}
+}`}, 1, gosec.NewConfig()},
+	}
 
 	// SampleCodeG305 - File path traversal when extracting zip/tar archives
 	SampleCodeG305 = []CodeSample{{[]string{`
@@ -1999,7 +2304,7 @@ func unzip(archive, target string) error {
 	for _, file := range reader.File {
 		path := filepath.Join(target, file.Name)
 		if file.FileInfo().IsDir() {
-			os.MkdirAll(path, file.Mode()) // #nosec
+			os.MkdirAll(path, file.Mode()) //#nosec
 			continue
 		}
 
@@ -2045,7 +2350,7 @@ func unzip(archive, target string) error {
                 archiveFile := file.Name
 		path := filepath.Join(target, archiveFile)
 		if file.FileInfo().IsDir() {
-			os.MkdirAll(path, file.Mode()) // #nosec
+			os.MkdirAll(path, file.Mode()) //#nosec
 			continue
 		}
 

@@ -1,7 +1,7 @@
 
 # gosec - Golang Security Checker
 
-Inspects source code for security problems by scanning the Go AST.
+Inspects source code for security problems by scanning the Go AST
 
 <img src="https://securego.io/img/gosec.png" width="320">
 
@@ -277,7 +277,7 @@ AST so can apply to a whole block or more granularly to a single expression.
 
 ```go
 
-import "md5" // #nosec
+import "md5" //#nosec
 
 
 func main(){
@@ -293,11 +293,11 @@ func main(){
 
 When a specific false positive has been identified and verified as safe, you may wish to suppress only that single rule (or a specific set of rules)
 within a section of code, while continuing to scan for other problems. To do this, you can list the rule(s) to be suppressed within
-the `#nosec` annotation, e.g: `/* #nosec G401 */` or `// #nosec G201 G202 G203`
+the `#nosec` annotation, e.g: `/* #nosec G401 */` or `//#nosec G201 G202 G203`
 
 You could put the description or justification text for the annotation. The
 justification should be after the rule(s) to suppress and start with two or
-more dashes, e.g: `// #nosec G101 G102 -- This is a false positive`
+more dashes, e.g: `//#nosec G101 G102 -- This is a false positive`
 
 In some cases you may also want to revisit places where `#nosec` annotations
 have been used. To run the scanner and ignore any `#nosec` annotations you
@@ -445,3 +445,9 @@ This will generate the `rules/tls_config.go` file which will contain the current
 ## Who is using gosec?
 
 This is a [list](USERS.md) with some of the gosec's users.
+
+## Sponsors
+
+Support this project by becoming a sponsor. Your logo will show up here with a link to your website
+
+<a href="https://github.com/Daimler" target="_blank"><img src="https://avatars.githubusercontent.com/u/34240465?s=80&v=4"></a>

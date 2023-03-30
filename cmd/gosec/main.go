@@ -70,7 +70,7 @@ func (a *arrayFlags) Set(value string) error {
 }
 
 var (
-	// #nosec flag
+	//#nosec flag
 	flagIgnoreNoSec = flag.Bool("nosec", false, "Ignores #nosec comments when set")
 
 	// show ignored
@@ -79,7 +79,7 @@ var (
 	// format output
 	flagFormat = flag.String("fmt", "text", "Set output format. Valid options are: json, yaml, csv, junit-xml, html, sonarqube, golint, sarif or text")
 
-	// #nosec alternative tag
+	//#nosec alternative tag
 	flagAlternativeNoSec = flag.String("nosec-tag", "", "Set an alternative string for #nosec. Some examples: #dontanalyze, #falsepositive")
 
 	// output file
@@ -141,7 +141,7 @@ var (
 	logger *log.Logger
 )
 
-// #nosec
+//#nosec
 func usage() {
 	usageText := fmt.Sprintf(usageText, Version, GitTag, BuildDate)
 	fmt.Fprintln(os.Stderr, usageText)
@@ -166,12 +166,12 @@ func usage() {
 func loadConfig(configFile string) (gosec.Config, error) {
 	config := gosec.NewConfig()
 	if configFile != "" {
-		// #nosec
+		//#nosec
 		file, err := os.Open(configFile)
 		if err != nil {
 			return nil, err
 		}
-		defer file.Close() // #nosec G307
+		defer file.Close() //#nosec G307
 		if _, err := config.ReadFrom(file); err != nil {
 			return nil, err
 		}
@@ -184,6 +184,14 @@ func loadConfig(configFile string) (gosec.Config, error) {
 	}
 	if *flagAlternativeNoSec != "" {
 		config.SetGlobal(gosec.NoSecAlternative, *flagAlternativeNoSec)
+	}
+	// set global option IncludeRules ,when flag set or global option IncludeRules  is nil
+	if v, _ := config.GetGlobal(gosec.IncludeRules); *flagRulesInclude != "" || v == "" {
+		config.SetGlobal(gosec.IncludeRules, *flagRulesInclude)
+	}
+	// set global option ExcludeRules ,when flag set or global option IncludeRules  is nil
+	if v, _ := config.GetGlobal(gosec.ExcludeRules); flagRulesExclude.String() != "" || v == "" {
+		config.SetGlobal(gosec.ExcludeRules, flagRulesExclude.String())
 	}
 	return config, nil
 }
@@ -238,11 +246,11 @@ func printReport(format string, color bool, rootPaths []string, reportInfo *gose
 }
 
 func saveReport(filename, format string, rootPaths []string, reportInfo *gosec.ReportInfo) error {
-	outfile, err := os.Create(filename)
+	outfile, err := os.Create(filename) //#nosec G304
 	if err != nil {
 		return err
 	}
-	defer outfile.Close() // #nosec G307
+	defer outfile.Close() //#nosec G307
 	err = report.CreateReport(outfile, format, false, rootPaths, reportInfo)
 	if err != nil {
 		return err
@@ -309,7 +317,7 @@ func main() {
 
 	// Ensure at least one file was specified
 	if flag.NArg() == 0 {
-		fmt.Fprintf(os.Stderr, "\nError: FILE [FILE...] or './...' expected\n") // #nosec
+		fmt.Fprintf(os.Stderr, "\nError: FILE [FILE...] or './...' expected\n") //#nosec
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -348,7 +356,16 @@ func main() {
 	}
 
 	// Load enabled rule definitions
-	ruleList := loadRules(*flagRulesInclude, flagRulesExclude.String())
+	excludeRules, err := config.GetGlobal(gosec.ExcludeRules)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	includeRules, err := config.GetGlobal(gosec.IncludeRules)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	ruleList := loadRules(includeRules, excludeRules)
 	if len(ruleList.Rules) == 0 {
 		logger.Fatal("No rules are configured")
 	}
@@ -417,7 +434,7 @@ func main() {
 	}
 
 	// Finalize logging
-	logWriter.Close() // #nosec
+	logWriter.Close() //#nosec
 
 	// Do we have an issue? If so exit 1 unless NoFail is set
 	if (len(issues) > 0 || len(errors) > 0) && !*flagNoFail {

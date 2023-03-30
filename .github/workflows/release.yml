@@ -34,7 +34,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Release Docker Image
-        uses: elgohr/Publish-Docker-Github-Action@master
+        uses: elgohr/Publish-Docker-Github-Action@v5
         with:
             name: securego/gosec
             username: ${{ secrets.DOCKER_USERNAME }}
